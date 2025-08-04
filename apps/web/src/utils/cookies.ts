@@ -1,6 +1,6 @@
-import { COOKIE_SETTINGS } from '@/constants/validation';
+import { cookieSettings } from '@/constants/validation';
 
-export const setCookie = (name: string, value: string, days: number = COOKIE_SETTINGS.EXPIRES_DAYS) => {
+export const setCookie = (name: string, value: string, days: number = cookieSettings.EXPIRES_DAYS) => {
   const expires = new Date();
   expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
@@ -26,5 +26,5 @@ export const isFirstVisit = (): boolean => {
 };
 
 export const setFirstVisitCookie = () => {
-  setCookie('afetoatipico_first_visit', 'false', COOKIE_SETTINGS.EXPIRES_DAYS);
+  setCookie('afetoatipico_first_visit', 'false', cookieSettings.EXPIRES_DAYS);
 };

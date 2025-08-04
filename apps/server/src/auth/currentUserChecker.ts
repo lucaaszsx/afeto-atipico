@@ -1,15 +1,20 @@
+import { UserService } from '@/api/services/UserService';
 import { Action } from 'routing-controllers';
-import { TokenPayload } from '@/lib/auth';
+import { IUser } from '@/types/entities';
+import { Container } from 'typedi';
 
-export function currentUserChecker(action: Action): Promise<TokenPayload | undefined> {
-    const user = action.request.user;
-
+export async function currentUserChecker(action: Action): Promise<IUser | undefined> {
+    const payload = action.request.user;
+    
     if (
-        typeof user === 'object' &&
-        typeof user.userId === 'string' &&
-        typeof user.sessionId === 'string'
-    )
-        return Promise.resolve(user as TokenPayload);
+        typeof payload === 'object' &&
+        typeof payload.userId === 'string'
+    ) {
+        const userService = Container.get(UserService);
+        const user = await userService.findById(payload.userId);
+        
+        return user || undefined;
+    }
 
-    return Promise.resolve(undefined);
+    return undefined;
 }

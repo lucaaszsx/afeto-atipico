@@ -9,37 +9,37 @@ import { Service } from 'typedi';
 export class ApiGroupModel extends ApiBaseModel implements IGroup {
     @IsString()
     @Expose()
-    name: string;
+    name!: string;
 
     @IsString()
     @Expose()
-    description: string;
+    description!: string;
 
     @IsArray()
     @IsString({ each: true })
     @Expose()
-    tags: string[];
+    tags!: string[];
 
     @IsString()
     @Expose()
-    owner: string;
+    owner!: string;
 
     @IsArray()
     @IsString({ each: true })
     @Expose()
-    members: string[];
+    members!: string[];
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
     @Expose()
-    createdAt: Date;
+    createdAt!: Date;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
     @Expose()
-    updatedAt: Date;
+    updatedAt!: Date;
 
-    constructor(data: IGroup = {} as IGroup) {
+    constructor(data: Partial<IGroup> = {}) {
         super(data);
     }
 }

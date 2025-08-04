@@ -5,10 +5,13 @@ import { Child } from './Child';
 @Exclude()
 export class PublicUser {
     @Expose()
-    username: string;
+    id!: string;
+    
+    @Expose()
+    username!: string;
 
     @Expose()
-    displayName: string;
+    displayName!: string;
 
     @Expose()
     bio?: string;
@@ -17,12 +20,18 @@ export class PublicUser {
     avatarUrl?: string;
 
     @Expose()
-    status: UserStatus;
+    status!: UserStatus;
 
     @Expose()
-    isVerified: boolean;
+    isVerified!: boolean;
 
     @Expose()
     @Type(() => Child)
-    children: Child[];
+    children!: Child[];
+
+    @Expose()
+    createdAt!: Date;
+    
+    @Expose()
+    updatedAt!: Date;
 }

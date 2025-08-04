@@ -18,7 +18,7 @@ export default class CookieParserMiddleware implements ExpressMiddlewareInterfac
     private cookieParserHandler: (req: Request, res: Response, next: NextFunction) => void;
 
     constructor() {
-        this.cookieParserHandler = cookieParser(EnvConfig.Cookie?.secret);
+        this.cookieParserHandler = cookieParser();
     }
 
     use(req: Request, res: Response, next: NextFunction): void {

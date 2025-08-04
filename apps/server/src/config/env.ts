@@ -2,7 +2,7 @@
  * @fileoverview Centralized runtime configuration using validated environment variables.
  * Ensures consistent setup for server, database, rate limiting, Cors, and JWT settings.
  *
- * @author Lucas Melo
+ * @author Lucas
  * @license MIT
  * @created 2025-07-14
  */
@@ -138,6 +138,7 @@ interface ApplicationInterface {
      */
     readonly dirs: {
         readonly controllers: string;
+        readonly subscribers: string;
     };
 }
 
@@ -326,7 +327,8 @@ const Application: ApplicationInterface = {
     baseUrl: getEnvVariable('APP_BASE_URL'),
     routePrefix: getEnvVariable('APP_ROUTE_PREFIX'),
     dirs: {
-        controllers: getEnvPath(getEnvVariable('APP_DIR_CONTROLLERS'))
+        controllers: getEnvPath(getEnvVariable('APP_DIR_CONTROLLERS')),
+        subscribers: getEnvPath(getEnvVariable('APP_DIR_SUBSCRIBERS'))
     }
 };
 
@@ -343,7 +345,7 @@ const Server: ServerInterface = {
 const Cors: CorsInterface = {
     origins: parseEnvArray(getEnvVariable('CORS_ORIGINS')),
     methods: parseEnvArray(getEnvVariable('CORS_METHODS')),
-    allowedHeaders: parseEnvArray(getEnvVariable('CORS_HEADERS')),
+    headers: parseEnvArray(getEnvVariable('CORS_HEADERS')),
     credentials: getEnvVariable('CORS_CREDENTIALS', EnvType.Bool)
 };
 

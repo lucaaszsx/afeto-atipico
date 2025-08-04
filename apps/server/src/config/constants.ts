@@ -74,9 +74,3 @@ export const ReportConstraints = {
         maxLength: 500
     }
 } as const;
-
-export const GeneralConstraints = {
-    idRegex: /^[a-f\d]{24}$/i, // MongoDB ObjectID
-    defaultAvatarUrl: 'https://example.com/default-avatar.png',
-    maxUploadSizeMB: 10
-} as const;

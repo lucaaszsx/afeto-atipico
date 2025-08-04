@@ -8,22 +8,28 @@
 import { Exclude, Expose, Type } from 'class-transformer';
 import { PrivateUser, PublicUser } from './models/user';
 
-export class RegisterUserResponse extends PrivateUser {}
+@Exclude()
+export class RegisterUserResponse {
+    @Type(() => PrivateUser)
+    @Expose()
+    user!: PrivateUser;
+
+    @Expose()
+    accessToken!: string;
+}
 
 @Exclude()
 export class LoginUserResponse {
     @Type(() => PrivateUser)
     @Expose()
-    user: PrivateUser;
+    user!: PrivateUser;
 
     @Expose()
-    accessToken: string;
+    accessToken!: string;
 }
-
-export class VerifyEmailResponse extends PrivateUser {}
 
 @Exclude()
 export class RefreshResponse {
     @Expose()
-    accessToken: string;
+    accessToken!: string;
 }

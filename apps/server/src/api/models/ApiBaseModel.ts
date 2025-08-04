@@ -8,24 +8,26 @@ export abstract class ApiBaseModel implements IBaseEntity {
     @Expose()
     @IsString()
     @IsNotEmpty()
-    public id: string;
+    public id!: string;
 
     @Expose()
     @Type(() => Date)
-    public createdAt: Date;
+    public createdAt!: Date;
 
-    @Expose()
     @Type(() => Date)
-    public updatedAt: Date;
+    public updatedAt!: Date;
 
-    constructor(data?: IBaseEntity) {
+    constructor(data?: Partial<IBaseEntity>) {
         this.createdAt = new Date();
         this.updatedAt = new Date();
-
+        
         hydrateEntity(this, data);
     }
 
-    public transform(options?: ClassTransformOptions): Record<string, any> | any[] {
-        return instanceToPlain(this, options);
+    public transform(options?: ClassTransformOptions): Record<string, any> {
+        return instanceToPlain(this, {
+            excludeExtraneousValues: true,
+            ...options
+        });
     }
 }

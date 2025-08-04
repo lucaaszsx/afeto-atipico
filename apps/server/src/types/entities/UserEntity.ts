@@ -35,7 +35,7 @@ export interface IChild {
 
 export interface IUser extends IBaseEntity {
     username: string;
-    email: string;
+    email?: string;
     password: string;
     displayName: string;
     avatarUrl?: string;

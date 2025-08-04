@@ -1,9 +1,7 @@
-import { isNumber, isString, isObject, isArray, isDate, isNil } from 'lodash';
-
 type Constructor<T = any> = new (...args: any[]) => T;
 
 export function hydrateEntity<T extends object>(target: T, data?: Partial<T>): void {
-    if (isNil(data)) return;
+    if (!data) return;
 
     const keys = Object.keys(data) as Array<keyof T>;
 
@@ -20,17 +18,17 @@ export function hydrateEntity<T extends object>(target: T, data?: Partial<T>): v
 }
 
 function processValue<T extends object>(target: T, prop: keyof T, value: any): void {
-    if (isNil(value)) {
+    if (value == null) {
         setKeyValue(target, prop, value);
-    } else if (isNumber(value) || typeof value === 'boolean' || typeof value === 'function') {
+    } else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'function') {
         setKeyValue(target, prop, value);
-    } else if (isArray(value)) {
+    } else if (Array.isArray(value)) {
         setKeyValue(target, prop, [...value]);
-    } else if (isDate(value) || isDateProperty(prop)) {
+    } else if (value instanceof Date || isDateProperty(prop)) {
         setKeyValue(target, prop, new Date(value));
-    } else if (isString(value)) {
+    } else if (typeof value === 'string') {
         setKeyValue(target, prop, value);
-    } else if (isObject(value)) {
+    } else if (typeof value === 'object') {
         handleObjectValue(target, prop, value);
     } else {
         setKeyValue(target, prop, value);
@@ -59,7 +57,7 @@ function handleObjectValue<T extends object>(target: T, prop: keyof T, value: an
 }
 
 function setKeyValue<T extends object>(target: T, key: keyof T, value: any): void {
-    if (isNil(key)) return;
+    if (key == null) return;
 
     const setter = 'set' + capitalizeFirst(String(key));
 

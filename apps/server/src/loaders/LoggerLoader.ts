@@ -12,7 +12,7 @@ import { Logger } from '@/lib/logger';
 
 export const LoggerLoader: MicroframeworkLoader = async (
     settings?: MicroframeworkSettings
-): void => {
+): Promise<void> => {
     /**
      * Custom log format used in development for colorized, readable output.
      */

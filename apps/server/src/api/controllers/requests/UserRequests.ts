@@ -6,75 +6,47 @@
  */
 
 import {
-    IsOptionalArrayOf,
     IsRequiredString,
     IsOptionalString,
-    IsRequiredEmail,
-    IsOptionalEmail,
-    IsOptionalEnum
+    IsRequiredInt
 } from './decorators';
 import { UserConstraints } from '@/config/constants';
-import { ApiChildModel } from '@/api/models/ApiUserModel';
-import { UserStatus } from '@/types/enums';
-import { EnvConfig } from '@/config/env';
 
-const { identifyFields, securityFields, profileFields } = UserConstraints;
+const { identifyFields, profileFields } = UserConstraints;
 
-// export class UpdateUserRequest {
-//     @IsOptionalString(
-//         identifyFields.username.minLength,
-//         identifyFields.username.maxLength,
-//         identifyFields.username.pattern
-//     )
-//     username?: string;
+export class UpdateProfileRequest {
+    @IsOptionalString(
+        identifyFields.username.minLength,
+        identifyFields.username.maxLength,
+        identifyFields.username.pattern
+    )
+    username?: string;
 
-//     @IsOptionalEmail()
-//     @IsOptionalString(
-//         identifyFields.email.minLength,
-//         identifyFields.email.maxLength
-//     )
-//     email?: string;
+    @IsOptionalString(
+        identifyFields.displayName.minLength,
+        identifyFields.displayName.maxLength,
+        identifyFields.displayName.pattern
+    )
+    displayName?: string;
 
-//     @IsOptionalString(
-//         identifyFields.displayName.minLength,
-//         identifyFields.displayName.maxLength,
-//         identifyFields.displayName.pattern
-//     )
-//     displayName?: string;
+    @IsOptionalString(
+        undefined, // Remove minLength reference since it doesn't exist
+        profileFields.bio.maxLength
+    )
+    bio?: string;
+}
 
-//     @IsOptionalString(0, profileFields.bio.maxLength)
-//     bio?: string;
+export class AddChildRequest {
+    @IsRequiredString(
+        profileFields.child.name.minLength,
+        profileFields.child.name.maxLength,
+        profileFields.child.name.pattern
+    )
+    name!: string;
 
-//     @IsOptionalEnum(UserStatus)
-//     status?: UserStatus;
+    @IsRequiredInt(0, profileFields.child.age.max)
+    age!: number;
 
-//     @IsOptionalArrayOf(() => ApiChildModel)
-//     children?: ApiChildModel[];
-// }
-
-// export class UpdateUserPasswordRequest {
-//     @IsRequiredString(
-//         securityFields.password.minLength,
-//         securityFields.password.maxLength
-//     )
-//     currentPassword: string;
-
-//     @IsRequiredString(
-//         securityFields.password.minLength,
-//         securityFields.password.maxLength
-//     )
-//     newPassword: string;
-// }
-
-// export class VerifyUserRequest {
-//     @IsRequiredString(
-//         EnvConfig.ValidationCode.size,
-//         EnvConfig.ValidationCode.size
-//     )
-//     code: string;
-// }
-
-// export class AddChildRequest {
-//     @IsOptionalArrayOf(() => ApiChildModel)
-//     child: ApiChildModel;
-// }
+    @IsOptionalString(undefined, profileFields.child.notes.maxLength)
+    notes?: string;
+}

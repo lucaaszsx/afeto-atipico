@@ -1,21 +1,30 @@
-import { GetUserResponse } from './responses/UserResponses';
+import {
+    UpdateProfileRequest,
+    AddChildRequest
+} from './requests/UserRequests';
+import {
+    GetUserResponse,
+    UpdateProfileResponse,
+    AddChildResponse,
+    RemoveChildResponse
+} from './responses/UserResponses';
 import {
     JsonController,
     Authorized,
-    OnNull,
     Body,
     Delete,
     Post,
     Put,
     Get,
     Req,
-    Res
+    Param
 } from 'routing-controllers';
 import { createApiResponse, ApiSuccessCodes } from '../responses';
 import type { ApiResponse } from '@/types/common';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
+import { RequiredUser } from '@/decorators';
 import { UserService } from '../services';
-import { AuthUtils } from '@/lib/auth';
+import { IUser } from '@/types/entities';
 import { Service } from 'typedi';
 
 @Service()
@@ -23,41 +32,113 @@ import { Service } from 'typedi';
 export default class UserController {
     constructor(private readonly userService: UserService) {}
 
+    // Helper method to safely serialize user data
+    private serializeUser(user: IUser): any {
+        return {
+            id: user.id,
+            username: user.username,
+            email: user.email || '',
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl || '',
+            bio: user.bio || '',
+            status: user.status,
+            isVerified: user.isVerified || false,
+            children: (user.children || []).map(child => ({
+                id: child.id,
+                name: child.name,
+                age: child.age,
+                notes: child.notes || ''
+            })),
+            createdAt: user.createdAt || new Date(),
+            updatedAt: user.updatedAt || new Date()
+        };
+    }
+
     @Get('/@me')
     @Authorized()
-    public async me(@Req() req: Request): Promise<ApiResponse<GetUserResponse | null>> {
-        const { userId } = req.user || {};
-        let user = null;
-
-        if (userId) user = await this.userService.findOne({ id: userId });
-
-        return createApiResponse<GetUserResponse | null>({
+    public async me(
+        @Req() req: Request,
+        @RequiredUser() user: IUser
+    ): Promise<ApiResponse<GetUserResponse>> {
+        return createApiResponse<GetUserResponse>({
             apiCode: ApiSuccessCodes.OK,
-            data: user.toObject({ groups: ['private'] }),
+            data: this.serializeUser(user),
             path: req.path
         });
     }
 
-    // @Put('/:userId')
-    // @OnNull(() => new EntityNotFoundException())
-    // @ResponseSchema(UpdateUserResponse)
-    // public async update() {}
+    @Put('/@me')
+    @Authorized()
+    public async updateProfile(
+        @Body() body: UpdateProfileRequest,
+        @Req() req: Request,
+        @RequiredUser() user: IUser
+    ): Promise<ApiResponse<UpdateProfileResponse>> {
+        const updateData: any = {};
+        
+        if (body.username !== undefined) updateData.username = body.username;
+        if (body.displayName !== undefined) updateData.displayName = body.displayName;
+        if (body.bio !== undefined) updateData.bio = body.bio;
 
-    // @Put('/:userId/password')
-    // @OnNull(() => new EntityNotFoundException())
-    // @ResponseSchema(UpdateUserPasswordResponse)
-    // public async updatePassword() {}
+        const updatedUser = await this.userService.update(
+            { id: user.id },
+            updateData
+        );
 
-    // @Delete('/:userId')
-    // @OnNull(() => new EntityNotFoundException())
-    // @ResponseSchema(DeleteUserResponse)
-    // public async delete() {}
+        return createApiResponse<UpdateProfileResponse>({
+            apiCode: ApiSuccessCodes.OK,
+            data: this.serializeUser(updatedUser),
+            path: req.path
+        });
+    }
 
-    // @Put('/:userId/childs/:childId')
-    // @ResponseSchema(AddChildResponse)
-    // public async addChild() {}
+    @Post('/@me/children')
+    @Authorized()
+    public async addChild(
+        @Body() body: AddChildRequest,
+        @Req() req: Request,
+        @RequiredUser() user: IUser
+    ): Promise<ApiResponse<AddChildResponse>> {
+        const updatedUser = await this.userService.addChild(user.id, {
+            name: body.name,
+            age: body.age,
+            notes: body.notes
+        });
 
-    // @Delete('/:userId/childs/:childId')
-    // @ResponseSchema(DeleteChildResponse)
-    // public async deleteChild() {}
+        return createApiResponse<AddChildResponse>({
+            apiCode: ApiSuccessCodes.CREATED,
+            data: this.serializeUser(updatedUser),
+            path: req.path
+        });
+    }
+
+    @Delete('/@me/children/:childId')
+    @Authorized()
+    public async removeChild(
+        @Param('childId') childId: string,
+        @Req() req: Request,
+        @RequiredUser() user: IUser
+    ): Promise<ApiResponse<RemoveChildResponse>> {
+        const updatedUser = await this.userService.removeChild(user.id, childId);
+
+        return createApiResponse<RemoveChildResponse>({
+            apiCode: ApiSuccessCodes.OK,
+            data: this.serializeUser(updatedUser),
+            path: req.path
+        });
+    }
+
+    @Delete('/@me')
+    @Authorized()
+    public async deleteAccount(
+        @Req() req: Request,
+        @RequiredUser() user: IUser
+    ): Promise<ApiResponse<null>> {
+        await this.userService.delete(user.id);
+
+        return createApiResponse<null>({
+            apiCode: ApiSuccessCodes.NO_CONTENT,
+            path: req.path
+        });
+    }
 }

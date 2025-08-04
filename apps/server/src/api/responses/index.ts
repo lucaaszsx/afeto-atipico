@@ -15,8 +15,6 @@ export { BaseException } from './exceptions/Base';
 // ────────────────────────────────
 export { AuthenticationFailedException } from './exceptions/auth/misc/AuthenticationFailed';
 
-export { EmailNotVerifiedException } from './exceptions/auth/email/EmailNotVerified';
-
 export { RefreshTokenMissingException } from './exceptions/auth/tokens/RefreshTokenMissing';
 export { InvalidRefreshTokenException } from './exceptions/auth/tokens/InvalidRefreshToken';
 export { RefreshTokenExpiredException } from './exceptions/auth/tokens/RefreshTokenExpired';
@@ -45,7 +43,7 @@ export { EmailCannotBeSentException } from './exceptions/external/EmailCannotBeS
 export { GroupNotFoundException } from './exceptions/groups/GroupNotFound';
 export { GroupAlreadyExistsException } from './exceptions/groups/GroupAlreadyExists';
 export { NotGroupOwnerException } from './exceptions/groups/NotGroupOwner';
-export { CannotLeaveAsOwnerException } from './exceptions/groups/CannotLeaveAsGroupOwner';
+export { CannotLeaveAsGroupOwnerException } from './exceptions/groups/CannotLeaveAsGroupOwner';
 
 export { AlreadyGroupMemberException } from './exceptions/groups/members/AlreadyGroupMember';
 export { NotGroupMemberException } from './exceptions/groups/members/NotGroupMember';
@@ -60,6 +58,9 @@ export { ReplyMessageNotFoundException } from './exceptions/groups/messages/Repl
 // ────────────────────────────────
 export { UserAlreadyExistsException } from './exceptions/users/UserAlreadyExists';
 export { UserNotFoundException } from './exceptions/users/UserNotFound';
+export { EmailAlreadyExistsException } from './exceptions/users/EmailAlreadyExists';
+export { EmailNotVerifiedException } from './exceptions/users/EmailNotVerified';
+export { UsernameAlreadyExistsException } from './exceptions/users/UsernameAlreadyExists';
 
 // ────────────────────────────────
 // Infrastructure / Internal

@@ -1,7 +1,5 @@
-import { ClassTransformOptions } from 'class-transformer';
 import { GroupConstraints } from '@/config/constants';
 import { SnowflakeGenerator } from '@/lib/snowflake';
-import { ApiGroupModel } from '@/api/models';
 import { IGroup } from '@/types/entities';
 import { Schema, model } from 'mongoose';
 
@@ -59,6 +57,17 @@ export const GroupSchema: Schema<IGroup> = new Schema<IGroup>({
         type: [String],
         default: [],
         ref: 'User'
+    }
+});
+
+// Clean toObject transform to prevent circular references
+GroupSchema.set('toObject', {
+    transform: function (doc: any, ret: any, options: any = {}) {
+        // Remove Mongoose internal properties
+        delete ret._id;
+        delete ret.__v;
+        
+        return ret;
     }
 });
 

@@ -10,13 +10,13 @@ import { Exclude, Expose, Type } from 'class-transformer';
 @Exclude()
 export class Child {
     @Expose()
-    id: string;
+    id!: string;
 
     @Expose()
-    name: string;
+    name!: string;
 
     @Expose()
-    age: number;
+    age!: number;
 
     @Expose()
     notes?: string;

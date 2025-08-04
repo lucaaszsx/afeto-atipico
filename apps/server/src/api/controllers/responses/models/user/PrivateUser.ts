@@ -4,5 +4,5 @@ import { PublicUser } from './PublicUser';
 @Exclude()
 export class PrivateUser extends PublicUser {
     @Expose()
-    email: string;
+    email!: string;
 }

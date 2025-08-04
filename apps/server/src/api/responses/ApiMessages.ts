@@ -10,9 +10,7 @@
 
 import { ApiErrorCodes } from './ApiCodes';
 
-type MessageFormatter = (...params: (string | number)[]) => string;
-
-export const ApiErrorMessages: Record<ApiErrorCodes, MessageFormatter> = {
+export const ApiErrorMessages: Record<ApiErrorCodes, string> = {
     // ────────────────────────────────
     // General / Server Errors
     // ────────────────────────────────
@@ -87,5 +85,7 @@ export const ApiErrorMessages: Record<ApiErrorCodes, MessageFormatter> = {
 
     // User Management Errors
     [ApiErrorCodes.USER_ALREADY_EXISTS]: 'A user with the provided credentials already exists',
-    [ApiErrorCodes.USER_NOT_FOUND]: 'The requested user was not found'
+    [ApiErrorCodes.USER_NOT_FOUND]: 'The requested user was not found',
+    [ApiErrorCodes.EMAIL_ALREADY_EXISTS]: 'A user with the provided email address already exists',
+    [ApiErrorCodes.USERNAME_ALREADY_EXISTS]: 'The chosen username is already in use by another account'
 };

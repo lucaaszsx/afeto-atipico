@@ -5,6 +5,8 @@
  * @license MIT
  */
 
+export { EventDispatcherLoader } from './EventDispatcherLoader';
+export { WebSocketLoader } from './WebSocketLoader';
 export { DatabaseLoader } from './DatabaseLoader';
 export { LoggerLoader } from './LoggerLoader';
 export { ServerLoader } from './ServerLoader';

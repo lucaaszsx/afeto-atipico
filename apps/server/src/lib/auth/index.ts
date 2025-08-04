@@ -8,11 +8,12 @@ import {
 } from '@/api/responses';
 import { IRefreshTokenSession, ITokenWithExpiry, IUserVerification } from '@/types/entities';
 import { randomBytes, createHash, randomInt } from 'node:crypto';
-import jwt, { TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken';
+import jwt, { TokenExpiredError, JsonWebTokenError, SignOptions } from 'jsonwebtoken';
 import { VerificationContext } from '@/types/enums';
 import { Request, Response } from 'express';
 import { EnvConfig } from '@/config/env';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import ms from 'ms';
 
 export interface TokenPayload {
@@ -38,13 +39,13 @@ export class AuthUtils {
 
     static generateAccessToken(userId: string, sessionId: string): string {
         return jwt.sign(this.getPayload(userId, sessionId), this.ACCESS_TOKEN_SECRET, {
-            expiresIn: this.ACCESS_TOKEN_EXPIRES_IN
+            expiresIn: this.ACCESS_TOKEN_EXPIRES_IN as any
         });
     }
 
     static generateRefreshToken(userId: string, sessionId: string): string {
         return jwt.sign(this.getPayload(userId, sessionId), this.REFRESH_TOKEN_SECRET, {
-            expiresIn: this.REFRESH_TOKEN_EXPIRES_IN
+            expiresIn: this.REFRESH_TOKEN_EXPIRES_IN as any
         });
     }
 
@@ -54,8 +55,8 @@ export class AuthUtils {
         try {
             return jwt.verify(token, this.ACCESS_TOKEN_SECRET) as TokenPayload;
         } catch (error) {
-            if (error instanceof JsonWebTokenError) throw new InvalidAccessTokenException();
-            else if (error instanceof TokenExpiredError) throw new AccessTokenExpiredException();
+            if (error instanceof TokenExpiredError) throw new AccessTokenExpiredException();
+            else if (error instanceof JsonWebTokenError) throw new InvalidAccessTokenException();
             else throw error;
         }
     }
@@ -66,19 +67,23 @@ export class AuthUtils {
         try {
             return jwt.verify(token, this.REFRESH_TOKEN_SECRET) as TokenPayload;
         } catch (error) {
-            if (error instanceof JsonWebTokenError) throw new InvalidRefreshTokenException();
-            else if (error instanceof TokenExpiredError) throw new RefreshTokenExpiredException();
+            if (error instanceof TokenExpiredError) throw new RefreshTokenExpiredException();
+            else if (error instanceof JsonWebTokenError) throw new InvalidRefreshTokenException();
             else throw error;
         }
     }
 
     static setRefreshTokenCookie(res: Response, refreshToken: string): void {
-        res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
-            httpOnly: true,
-            secure: EnvConfig.Environment.node === 'prod',
-            sameSite: 'strict',
-            maxAge: ms(this.REFRESH_TOKEN_EXPIRES_IN)
-        });
+        const msValue = ms(this.REFRESH_TOKEN_EXPIRES_IN as any);
+        if (typeof msValue === 'number') {
+            res.cookie(this.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+                httpOnly: true,
+                secure: EnvConfig.Environment.node === 'prod',
+                sameSite: 'lax',
+                maxAge: msValue,
+                path: '/'
+            });
+        }
     }
 
     static getRefreshTokenCookie(req: Request): string | undefined {
@@ -92,6 +97,14 @@ export class AuthUtils {
     static hashPassToken(token: string): string {
         return createHash('sha256').update(token).digest('hex');
     }
+    
+    static async comparePassword(original: string, input: string): Promise<boolean> {
+        return bcrypt.compare(input, original);
+    }
+
+    static comparePassResetTokens(original: string, input: string): boolean {
+        return original === this.hashPassToken(input);
+    }
 
     static createSession(
         userId: string,
@@ -104,14 +117,18 @@ export class AuthUtils {
         const refreshToken = this.generateRefreshToken(userId, sessionId);
         const accessToken = this.generateAccessToken(userId, sessionId);
 
+        const msValue = ms(this.REFRESH_TOKEN_EXPIRES_IN as any);
+        const expiresAt = typeof msValue === 'number' ? new Date(Date.now() + msValue) : new Date(Date.now() + 86400000);
+
         return {
             session: {
                 sessionId,
                 refreshToken,
                 createdAt: new Date(),
-                expiresAt: new Date(Date.now() + ms(this.REFRESH_TOKEN_EXPIRES_IN)),
+                expiresAt,
                 ip,
-                userAgent
+                userAgent,
+                isRevoked: false
             },
             accessToken
         };
@@ -134,9 +151,5 @@ export class AuthUtils {
         const tokenHash = this.hashPassToken(token);
 
         return { token, tokenHash, createdAt, expiresAt };
-    }
-
-    static comparePassResetTokens(original: string, input: string): boolean {
-        return original === this.hashPassToken(input);
     }
 }

@@ -1,23 +1,66 @@
-import { UserAlreadyExistsException, UserNotFoundException } from '../responses';
-import { ProjectionType, UpdateQuery, QueryOptions, FilterQuery } from 'mongoose';
-import { LoggerDecorator } from '@/decorators';
+import {
+    UsernameAlreadyExistsException,
+    EmailAlreadyExistsException,
+    UserNotFoundException
+} from '../responses';
+import { MongooseError, ProjectionType, UpdateQuery, QueryOptions, FilterQuery } from 'mongoose';
+import { EventDispatcherDecorator, LoggerDecorator } from '@/decorators';
+import { ClassTransformOptions } from 'class-transformer';
+import { EventDispatcher } from 'event-dispatch';
 import { LoggerInterface } from '@/lib/logger';
 import { MongoErrorCode } from '@/types/enums';
+import { WSEventType } from '@/websocket';
 import { DbUserModel } from '@/database';
 import { IUser } from '@/types/entities';
 import { Service } from 'typedi';
-import { isNil } from 'lodash';
 
 @Service()
 export class UserService {
     constructor(
+        @EventDispatcherDecorator()
+        private readonly eventDispatcher: EventDispatcher,
         @LoggerDecorator(__filename)
         private readonly logger: LoggerInterface
     ) {}
+    
+    private handleDuplicateKeyError(identifier: string, error: any): void {
+        const duplicatedKey = Object.keys(error.keyPattern ?? {}).find(() => true);
+        
+        this.logger.error(`Duplicate key '${duplicatedKey || 'unknown'}' error while creating user => ${identifier}`);
+
+        switch (duplicatedKey)  {
+            case 'username':
+                throw new UsernameAlreadyExistsException();
+                
+            case 'email':
+                throw new EmailAlreadyExistsException();
+        }
+    }
+
+    // Fix the logging to handle complex filter objects safely
+    private formatFilterForLogging(filter: FilterQuery<IUser>): string {
+        try {
+            return Object.entries(filter)
+                .map(([k, v]) => {
+                    if (typeof v === 'object' && v !== null) {
+                        // Handle MongoDB operators like $in, $regex, etc.
+                        if ('$in' in v && Array.isArray(v.$in)) return `${k}=[${v.$in.join(',')}]`;
+                        if ('$regex' in v) return `${k}=/${v.$regex}/${v.$options || ''}`;
+                        // For other complex objects, use JSON.stringify safely
+                        return `${k}=${JSON.stringify(v)}`;
+                    }
+                    return `${k}=${v}`;
+                })
+                .join('; ');
+        } catch (error) {
+            // Fallback if JSON.stringify fails
+            return 'complex_filter';
+        }
+    }
 
     public async create(
         data: Partial<IUser>,
-        toObjectOptions: Record<string, unknown>
+        transformOptions?: ClassTransformOptions
     ): Promise<IUser> {
         const identifier = `"${data.displayName || 'unknown'}" <${data.email || 'unknown@unknown'}>`;
 
@@ -30,19 +73,18 @@ export class UserService {
 
             this.logger.info(`User created successfully => ${identifier}`);
 
-            return savedDocument.toObject(toObjectOptions);
-        } catch (error) {
+            return transformOptions && savedDocument
+                ? savedDocument.toObject()
+                : savedDocument;
+        } catch (error: unknown) {
             if (
-                !isNil(error) &&
-                (error as any).code &&
+                error &&
+                typeof error === 'object' &&
+                'code' in error &&
                 (error as any).code === MongoErrorCode.DUPLICATE_KEY
-            ) {
-                this.logger.error(`Duplicate key error while creating user => ${identifier}`);
+            ) this.handleDuplicateKeyError(identifier, error);
 
-                throw new UserAlreadyExistsException();
-            }
-
-            this.logger.error(`Error creating user => ${identifier}: ${error.message}`);
+            this.logger.error(`Error creating user => ${identifier}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -50,21 +92,22 @@ export class UserService {
 
     public async findOne(
         filter: FilterQuery<IUser>,
+        transformOptions?: ClassTransformOptions,
         projection?: ProjectionType<IUser>,
         options?: QueryOptions
     ): Promise<IUser | null> {
-        const identifier = Object.entries(filter)
-            .map(([k, v]) => `${k}=${v}`)
-            .join('; ');
+        const identifier = this.formatFilterForLogging(filter);
 
         this.logger.info(`Getting a single user with filter => ${identifier}`);
 
         try {
-            const document = await DbUserModel.findOne(filter, projection, options).lean();
+            const document = await DbUserModel.findOne(filter, projection, options);
 
-            return document;
-        } catch (error) {
-            this.logger.error(`Error finding user => ${identifier}: ${error.message}`);
+            return transformOptions && document
+                ? document.toObject()
+                : document;
+        } catch (error: unknown) {
+            this.logger.error(`Error finding user => ${identifier}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -72,21 +115,22 @@ export class UserService {
 
     public async findUsers(
         filter: FilterQuery<IUser>,
+        transformOptions?: ClassTransformOptions,
         projection?: ProjectionType<IUser>,
         options?: QueryOptions
     ): Promise<IUser[]> {
-        const identifier = Object.entries(filter)
-            .map(([k, v]) => `${k}=${v}`)
-            .join('; ');
+        const identifier = this.formatFilterForLogging(filter);
 
         this.logger.info(`Getting multiple users with filter => ${identifier}`);
 
         try {
-            const documents = await DbUserModel.find(filter, projection, options).lean();
+            const documents = await DbUserModel.find(filter, projection, options);
 
-            return documents;
-        } catch (error) {
-            this.logger.error(`Error finding users => ${identifier}: ${error.message}`);
+            return transformOptions && documents.length > 0
+                ? documents.map(doc => doc.toObject())
+                : documents;
+        } catch (error: unknown) {
+            this.logger.error(`Error finding users => ${identifier}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -95,18 +139,17 @@ export class UserService {
     public async update(
         query: FilterQuery<IUser>,
         data: UpdateQuery<IUser>,
-        options?: QueryOptions
+        transformOptions?: ClassTransformOptions,
+        options: QueryOptions = {}
     ): Promise<IUser> {
-        const identifier = Object.entries(query)
-            .map(([k, v]) => `${k}=${v}`)
-            .join('; ');
+        const identifier = this.formatFilterForLogging(query);
 
         try {
             const document = await DbUserModel.findOneAndUpdate(query, data, {
                 runValidators: true,
-                new: true,
+                returnDocument: 'after',
                 ...options
-            }).lean();
+            });
 
             if (!document) {
                 this.logger.warn(`User not found for update => ${identifier}`);
@@ -115,21 +158,22 @@ export class UserService {
             }
 
             this.logger.info(`User updated successfully => ${identifier}`);
-
-            return document;
-        } catch (error) {
+            
+            this.eventDispatcher.dispatch(WSEventType.USER_UPDATE, document);
+            
+            return transformOptions
+                ? document.toObject()
+                : document;
+        } catch (error: unknown) {
             if (error instanceof UserNotFoundException) throw error;
             if (
-                !isNil(error) &&
-                (error as any).code &&
+                error &&
+                typeof error === 'object' &&
+                'code' in error &&
                 (error as any).code === MongoErrorCode.DUPLICATE_KEY
-            ) {
-                this.logger.error(`Duplicate key error updating user => ${identifier}`);
+            ) this.handleDuplicateKeyError(identifier, error);
 
-                throw new UserAlreadyExistsException();
-            }
-
-            this.logger.error(`Error updating user => ${identifier}: ${error.message}`);
+            this.logger.error(`Error updating user => ${identifier}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -150,24 +194,26 @@ export class UserService {
             this.logger.info(`User deleted successfully => ${id}`);
 
             return true;
-        } catch (error) {
+        } catch (error: unknown) {
             if (error instanceof UserNotFoundException) throw error;
 
-            this.logger.error(`Error deleting user => ${id}: ${error.message}`);
+            this.logger.error(`Error deleting user => ${id}: ${(error as Error).message}`);
 
             throw error;
         }
     }
 
-    public async findById(id: string, projection?: ProjectionType<IUser>): Promise<IUser | null> {
+    public async findById(
+        id: string,
+        transformOptions?: ClassTransformOptions,
+        projection?: ProjectionType<IUser>
+    ): Promise<IUser | null> {
         this.logger.info(`Finding user by ID => ${id}`);
 
         try {
-            const user = await this.findOne({ id }, projection);
-
-            return user;
-        } catch (error) {
-            this.logger.error(`Error finding user by ID => ${id}: ${error.message}`);
+            return await this.findOne({ id }, transformOptions, projection);
+        } catch (error: unknown) {
+            this.logger.error(`Error finding user by ID => ${id}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -175,16 +221,15 @@ export class UserService {
 
     public async findByEmail(
         email: string,
+        transformOptions?: ClassTransformOptions,
         projection?: ProjectionType<IUser>
     ): Promise<IUser | null> {
         this.logger.info(`Finding user by email => ${email}`);
 
         try {
-            const user = await this.findOne({ email }, projection);
-
-            return user;
-        } catch (error) {
-            this.logger.error(`Error finding user by email => ${email}: ${error.message}`);
+            return await this.findOne({ email }, transformOptions, projection);
+        } catch (error: unknown) {
+            this.logger.error(`Error finding user by email => ${email}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -192,16 +237,15 @@ export class UserService {
 
     public async findByUsername(
         username: string,
+        transformOptions?: ClassTransformOptions,
         projection?: ProjectionType<IUser>
     ): Promise<IUser | null> {
         this.logger.info(`Finding user by username => ${username}`);
 
         try {
-            const user = await this.findOne({ username }, projection);
-
-            return user;
-        } catch (error) {
-            this.logger.error(`Error finding user by username => ${username}: ${error.message}`);
+            return await this.findOne({ username }, transformOptions, projection);
+        } catch (error: unknown) {
+            this.logger.error(`Error finding user by username => ${username}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -209,11 +253,11 @@ export class UserService {
 
     public async existsById(id: string): Promise<boolean> {
         try {
-            const user = await this.findById(id, { _id: 1 });
+            const user = await this.findById(id, undefined, { id: 1 });
 
             return !!user;
-        } catch (error) {
-            this.logger.error(`Error checking if user exists by ID => ${id}: ${error.message}`);
+        } catch (error: unknown) {
+            this.logger.error(`Error checking if user exists by ID => ${id}: ${(error as Error).message}`);
 
             return false;
         }
@@ -229,16 +273,16 @@ export class UserService {
                     { displayName: { $regex: query, $options: 'i' } }
                 ]
             };
-
             const users = await this.findUsers(
                 searchFilter,
+                undefined,
                 { password: 0, verifications: 0, sessions: 0, passwordReset: 0 },
                 { sort: { username: 1 }, limit: 20, ...options }
             );
 
             return users;
-        } catch (error) {
-            this.logger.error(`Error searching users with query => ${query}: ${error.message}`);
+        } catch (error: unknown) {
+            this.logger.error(`Error searching users with query => ${query}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -251,8 +295,8 @@ export class UserService {
             const updatedUser = await this.update({ id: userId }, { password: newPassword });
 
             return updatedUser;
-        } catch (error) {
-            this.logger.error(`Error updating password for user => ${userId}: ${error.message}`);
+        } catch (error: unknown) {
+            this.logger.error(`Error updating password for user => ${userId}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -268,8 +312,8 @@ export class UserService {
             );
 
             return updatedUser;
-        } catch (error) {
-            this.logger.error(`Error adding child to user => ${userId}: ${error.message}`);
+        } catch (error: unknown) {
+            this.logger.error(`Error adding child to user => ${userId}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -285,8 +329,8 @@ export class UserService {
             );
 
             return updatedUser;
-        } catch (error) {
-            this.logger.error(`Error removing child from user => ${userId}: ${error.message}`);
+        } catch (error: unknown) {
+            this.logger.error(`Error removing child from user => ${userId}: ${(error as Error).message}`);
 
             throw error;
         }
@@ -311,10 +355,14 @@ export class UserService {
             );
 
             return updatedUser;
-        } catch (error) {
-            this.logger.error(`Error updating child for user => ${userId}: ${error.message}`);
+        } catch (error: unknown) {
+            this.logger.error(`Error updating child for user => ${userId}: ${(error as Error).message}`);
 
             throw error;
         }
+    }
+
+    public async findMany(filter: FilterQuery<IUser>): Promise<IUser[]> {
+        return this.findUsers(filter);
     }
 }

@@ -1,22 +1,16 @@
-
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AppContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { 
-    resendEmailVerification, 
-    user, 
-    isLoading, 
-    pendingVerification 
-  } = useAuth();
+  const { authService } = useAuth();
+  const user = authService.getCurrentUser();
   
-  if (!user) return <Navigate to="/cadastro" replace />;
-  if (!user?.isVerified) return <Navigate to="/login" replace />;
+  if (!authService.isAuthenticated) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 };

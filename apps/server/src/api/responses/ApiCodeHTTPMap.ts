@@ -49,15 +49,11 @@ export const ApiCodeHTTPMap: Record<number, StatusCodes> = {
     [ApiErrorCodes.INVALID_ACCESS_TOKEN]: StatusCodes.UNAUTHORIZED,
     [ApiErrorCodes.ACCESS_TOKEN_EXPIRED]: StatusCodes.UNAUTHORIZED,
 
-    // Entity-related Errors
-    [ApiErrorCodes.ENTITY_NOT_FOUND]: StatusCodes.NOT_FOUND,
-    [ApiErrorCodes.ENTITY_ALREADY_EXISTS]: StatusCodes.CONFLICT,
-
     // Validation Errors
     [ApiErrorCodes.VALIDATION_FAILED]: StatusCodes.BAD_REQUEST,
 
     // File Upload / Media Errors
-    [ApiErrorCodes.FILE_TOO_LARGE]: StatusCodes.PAYLOAD_TOO_LARGE,
+    [ApiErrorCodes.FILE_TOO_LARGE]: StatusCodes.REQUEST_TOO_LONG,
     [ApiErrorCodes.UNSUPPORTED_FILE_TYPE]: StatusCodes.UNSUPPORTED_MEDIA_TYPE,
     [ApiErrorCodes.FILE_UPLOAD_FAILED]: StatusCodes.INTERNAL_SERVER_ERROR,
     [ApiErrorCodes.FILE_NOT_FOUND]: StatusCodes.NOT_FOUND,
@@ -82,5 +78,7 @@ export const ApiCodeHTTPMap: Record<number, StatusCodes> = {
 
     // User Management Errors
     [ApiErrorCodes.USER_ALREADY_EXISTS]: StatusCodes.CONFLICT,
-    [ApiErrorCodes.USER_NOT_FOUND]: StatusCodes.NOT_FOUND
+    [ApiErrorCodes.USER_NOT_FOUND]: StatusCodes.NOT_FOUND,
+    [ApiErrorCodes.EMAIL_ALREADY_EXISTS]: StatusCodes.CONFLICT,
+    [ApiErrorCodes.USERNAME_ALREADY_EXISTS]: StatusCodes.CONFLICT
 };

@@ -78,7 +78,7 @@ export class R2Service {
      * @returns The full public URL.
      */
     getObjectUrl(key: string): string {
-        return `${EnvConfig.R2.publicBaseUrl.replace(/\/$/, '')}/${key}`;
+        return `${EnvConfig.R2.publicEndpoint.replace(/\/$/, '')}/${key}`;
     }
 
     /**
@@ -134,7 +134,7 @@ export class R2Service {
 
             const response = await this.client.send(command);
 
-            if (!response.Body || typeof response.Body.pipe !== 'function') {
+            if (!response.Body) {
                 this.logger.error(`Invalid object stream for key: ${key}`);
 
                 return null;

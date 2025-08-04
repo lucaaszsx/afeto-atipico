@@ -1,5 +1,4 @@
 import { ApiSuccessCodes, ApiErrorCodes } from '@/api/responses/ApiCodes';
-import { Types } from 'mongoose';
 
 export interface IBaseEntity {
     id: string;
@@ -7,9 +6,9 @@ export interface IBaseEntity {
     updatedAt?: Date;
 }
 
-export interface IBasePublicEntity
-    extends Omit<IBaseEntity, '_id' | 'updatedAt'>,
-        Required<Pick<IBaseEntity, 'createdAt'>> {}
+export interface IBasePublicEntity extends Pick<IBaseEntity, 'id' | 'createdAt'> {
+    createdAt: Date;
+}
 
 export type ApiResponse<T = Record<string, unknown>> =
     | {

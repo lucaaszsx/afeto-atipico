@@ -27,7 +27,7 @@ import { Logger } from '@/lib/logger';
 import { join } from 'node:path';
 
 export const ServerLoader: MicroframeworkLoader = async (
-    settings: MicroframeworkSettings
+    settings?: MicroframeworkSettings
 ): Promise<void> => {
     const app: ExpressApplication = createExpressServer({
         routePrefix: EnvConfig.Application.routePrefix,
@@ -62,7 +62,9 @@ export const ServerLoader: MicroframeworkLoader = async (
         logger.info(`Server started on port ${port}.`)
     );
 
-    settings.onShutdown(() => server.close());
-    settings.setData('server', server);
-    settings.setData('app', app);
+    if (settings) {
+        settings.onShutdown(() => server.close());
+        settings.setData('server', server);
+        settings.setData('app', app);
+    }
 };

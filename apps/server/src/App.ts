@@ -4,16 +4,28 @@
  * @author Lucas
  * @license MIT
  */
+import { addAlias } from 'module-alias';
 
+// Configure module alias based on environment
+addAlias('@', process.env.NODE_ENV === 'prod' ? __dirname : __dirname.replace('dist', 'src'));
+
+import 'module-alias/register';
 import 'reflect-metadata';
-import { DatabaseLoader, LoggerLoader, ServerLoader, IoCLoader } from './loaders';
+import {
+    EventDispatcherLoader,
+    WebSocketLoader,
+    DatabaseLoader,
+    LoggerLoader,
+    ServerLoader,
+    IoCLoader
+} from './loaders';
 import { bootstrapMicroframework } from 'microframework-w3tec';
 import { Logger } from './lib/logger';
 
 const logger = new Logger(__filename);
 
 bootstrapMicroframework({
-    loaders: [LoggerLoader, IoCLoader, DatabaseLoader, ServerLoader]
+    loaders: [LoggerLoader, IoCLoader, EventDispatcherLoader, DatabaseLoader, ServerLoader, WebSocketLoader]
 })
     .then(() => {
         logger.info('Application initialized successfully!');

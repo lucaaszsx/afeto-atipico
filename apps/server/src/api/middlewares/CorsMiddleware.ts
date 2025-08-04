@@ -29,7 +29,7 @@ export default class CorsMiddleware {
                 else callback(null, false);
             },
             methods: EnvConfig.Cors.methods,
-            allowedHeaders: EnvConfig.Cors.allowedHeaders,
+            allowedHeaders: EnvConfig.Cors.headers,
             credentials: EnvConfig.Cors.credentials
         };
 

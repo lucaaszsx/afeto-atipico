@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getCookie, setCookie } from '@/utils/cookies';
-import { COOKIE_SETTINGS } from '@/constants/validation';
+import { cookieSettings } from '@/constants/validation';
 
 type Theme = 'light' | 'dark';
 
@@ -16,7 +16,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [theme, setThemeState] = useState<Theme>('light');
 
   useEffect(() => {
-    const savedTheme = getCookie(COOKIE_SETTINGS.THEME) as Theme | null;
+    const savedTheme = getCookie(cookieSettings.THEME) as Theme | null;
     if (savedTheme) {
       setThemeState(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -30,7 +30,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    setCookie(COOKIE_SETTINGS.THEME, newTheme);
+    setCookie(cookieSettings.THEME, newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 

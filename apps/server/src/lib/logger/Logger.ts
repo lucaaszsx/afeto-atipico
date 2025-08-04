@@ -111,7 +111,7 @@ export class Logger {
      */
     private log(level: LoggerLevels, message: string, args: any[]): void {
         if (Object.prototype.hasOwnProperty.call(winston, level))
-            (winston as any)[level](`${this.formatScope()} ${message}`, ...args);
+            (winston as any)[level](`${this.formatScope()} ${message}`, args);
     }
 
     /**

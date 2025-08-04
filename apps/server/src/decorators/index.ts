@@ -4,4 +4,6 @@
  * @license MIT
  */
 
-export * from './LoggerDecorator';
+export { EventDispatcherDecorator } from './EventDispatcherDecorator';
+export { OptionalUser, RequiredUser } from './UserDecorator';
+export { LoggerDecorator } from './LoggerDecorator';

@@ -1,8 +1,8 @@
 import {
     InternalErrorException,
-    TokenMissingException,
-    TokenExpiredException,
-    InvalidTokenException
+    AccessTokenMissingException,
+    AccessTokenExpiredException,
+    InvalidAccessTokenException
 } from '@/api/responses';
 import { LoggerInterface, Logger } from '@/lib/logger';
 import { Action } from 'routing-controllers';
@@ -13,7 +13,7 @@ const logger: LoggerInterface = new Logger(__filename);
 export const authorizationChecker = async (action: Action, roles: string[]): Promise<boolean> => {
     const token = action.request.headers['authorization']?.split(' ').at(1);
     const payload = AuthUtils.verifyAccessToken(token);
-
+    
     if (
         typeof payload !== 'object' ||
         typeof payload.userId !== 'string' ||
@@ -29,6 +29,6 @@ export const authorizationChecker = async (action: Action, roles: string[]): Pro
     logger.info(`Authorized user '${payload.userId}' from IP: ${action.request.ip}`);
 
     action.request.user = payload;
-
+    
     return true;
 };

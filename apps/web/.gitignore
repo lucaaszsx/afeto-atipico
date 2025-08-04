@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
 pnpm-debug.log*
-pnpm-lock.yaml
 
 # Production builds
 dist/
@@ -11,13 +10,13 @@ build/
 .env
 .env.local
 .env.development.local
+.env.development
 .env.test.local
 .env.production.local
 .env.production
 
 # Cache directories
 .cache/
-.parcel-cache/
 .vite/
 
 # TypeScript
@@ -49,43 +48,8 @@ pids/
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output/
-
-# Temporary folders
-tmp/
-temp/
-
-# Optional pnpm cache directory
-.pnpm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional stylelint cache
-.stylelintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
 # Output of 'npm pack'
 *.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
 
 # pnpm
 .pnpm-store/

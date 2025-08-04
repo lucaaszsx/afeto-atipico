@@ -9,7 +9,12 @@ import {
     Matches,
     IsArray,
     IsEmail,
-    IsEnum
+    IsEnum,
+    IsInt,
+    Min,
+    Max,
+    ArrayMaxSize,
+    ArrayMinSize
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -81,6 +86,179 @@ export function IsOptionalString(
     };
 }
 
+// Number field: required
+export function IsRequiredInt(
+    min?: number,
+    max?: number,
+    options?: ValidationOptions
+) {
+    return function (target: any, propertyKey: string) {
+        IsInt({
+            message: `${propertyKey} must be an integer`,
+            ...options
+        })(target, propertyKey);
+        IsNotEmpty({ message: `${propertyKey} is required`, ...options })(target, propertyKey);
+
+        if (min !== undefined) {
+            Min(min, {
+                message: `${propertyKey} must be at least ${min}`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (max !== undefined) {
+            Max(max, {
+                message: `${propertyKey} must not exceed ${max}`,
+                ...options
+            })(target, propertyKey);
+        }
+    };
+}
+
+// Number field: optional
+export function IsOptionalInt(
+    min?: number,
+    max?: number,
+    options?: ValidationOptions
+) {
+    return function (target: any, propertyKey: string) {
+        IsOptional(options)(target, propertyKey);
+        IsInt({
+            message: `${propertyKey} must be an integer`,
+            ...options
+        })(target, propertyKey);
+
+        if (min !== undefined) {
+            Min(min, {
+                message: `${propertyKey} must be at least ${min}`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (max !== undefined) {
+            Max(max, {
+                message: `${propertyKey} must not exceed ${max}`,
+                ...options
+            })(target, propertyKey);
+        }
+    };
+}
+
+// Array of strings: required
+export function IsRequiredStringArray(
+    minItems?: number,
+    maxItems?: number,
+    minItemLength?: number,
+    maxItemLength?: number,
+    itemPattern?: RegExp,
+    options?: ValidationOptions
+) {
+    return function (target: any, propertyKey: string) {
+        IsArray({ message: `${propertyKey} must be an array`, ...options })(target, propertyKey);
+        IsString({ 
+            each: true, 
+            message: `Each item in ${propertyKey} must be a string`,
+            ...options 
+        })(target, propertyKey);
+
+        if (minItems !== undefined) {
+            ArrayMinSize(minItems, {
+                message: `${propertyKey} must contain at least ${minItems} items`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (maxItems !== undefined) {
+            ArrayMaxSize(maxItems, {
+                message: `${propertyKey} must not contain more than ${maxItems} items`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (minItemLength !== undefined) {
+            MinLength(minItemLength, {
+                each: true,
+                message: `Each item in ${propertyKey} must be at least ${minItemLength} characters long`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (maxItemLength !== undefined) {
+            MaxLength(maxItemLength, {
+                each: true,
+                message: `Each item in ${propertyKey} must not exceed ${maxItemLength} characters`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (itemPattern) {
+            Matches(itemPattern, {
+                each: true,
+                message: `Each item in ${propertyKey} contains invalid characters`,
+                ...options
+            })(target, propertyKey);
+        }
+    };
+}
+
+// Array of strings: optional
+export function IsOptionalStringArray(
+    minItems?: number,
+    maxItems?: number,
+    minItemLength?: number,
+    maxItemLength?: number,
+    itemPattern?: RegExp,
+    options?: ValidationOptions
+) {
+    return function (target: any, propertyKey: string) {
+        IsOptional(options)(target, propertyKey);
+        IsArray({ message: `${propertyKey} must be an array`, ...options })(target, propertyKey);
+        IsString({ 
+            each: true, 
+            message: `Each item in ${propertyKey} must be a string`,
+            ...options 
+        })(target, propertyKey);
+
+        if (minItems !== undefined) {
+            ArrayMinSize(minItems, {
+                message: `${propertyKey} must contain at least ${minItems} items`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (maxItems !== undefined) {
+            ArrayMaxSize(maxItems, {
+                message: `${propertyKey} must not contain more than ${maxItems} items`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (minItemLength !== undefined) {
+            MinLength(minItemLength, {
+                each: true,
+                message: `Each item in ${propertyKey} must be at least ${minItemLength} characters long`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (maxItemLength !== undefined) {
+            MaxLength(maxItemLength, {
+                each: true,
+                message: `Each item in ${propertyKey} must not exceed ${maxItemLength} characters`,
+                ...options
+            })(target, propertyKey);
+        }
+
+        if (itemPattern) {
+            Matches(itemPattern, {
+                each: true,
+                message: `Each item in ${propertyKey} contains invalid characters`,
+                ...options
+            })(target, propertyKey);
+        }
+    };
+}
+
 // Email: required
 export function IsRequiredEmail(options?: ValidationOptions) {
     return function (target: any, propertyKey: string) {
@@ -112,7 +290,7 @@ export function IsOptionalEmail(options?: ValidationOptions) {
 // Enum field: required
 export function IsRequiredEnum<T>(entity: any, options?: ValidationOptions) {
     return function (target: any, propertyKey: string) {
-        IsEnum(entity, { message: `Invalid ${propertyKey}.`, ...options })(target, propertyKey);
+        IsEnum(entity, { message: `Invalid ${propertyKey}`, ...options })(target, propertyKey);
     };
 }
 
@@ -120,7 +298,7 @@ export function IsRequiredEnum<T>(entity: any, options?: ValidationOptions) {
 export function IsOptionalEnum<T>(entity: any, options?: ValidationOptions) {
     return function (target: any, propertyKey: string) {
         IsOptional(options)(target, propertyKey);
-        IsEnum(entity, { message: `Invalid ${propertyKey}.`, ...options })(target, propertyKey);
+        IsEnum(entity, { message: `Invalid ${propertyKey}`, ...options })(target, propertyKey);
     };
 }
 
@@ -145,7 +323,7 @@ export function IsOptionalNested(typeFn: () => Function, options?: ValidationOpt
 export function IsOptionalArrayOf(typeFn: () => Function, options?: ValidationOptions) {
     return function (target: any, propertyKey: string) {
         IsOptional(options)(target, propertyKey);
-        IsArray({ ...options })(target, propertyKey);
+        IsArray({ message: `${propertyKey} must be an array`, ...options })(target, propertyKey);
         ValidateNested({ each: true, ...options })(target, propertyKey);
         Type(typeFn)(target, propertyKey);
     };
@@ -154,7 +332,7 @@ export function IsOptionalArrayOf(typeFn: () => Function, options?: ValidationOp
 // Array of nested objects: required
 export function IsRequiredArrayOf(typeFn: () => Function, options?: ValidationOptions) {
     return function (target: any, propertyKey: string) {
-        IsArray({ ...options })(target, propertyKey);
+        IsArray({ message: `${propertyKey} must be an array`, ...options })(target, propertyKey);
         ValidateNested({ each: true, ...options })(target, propertyKey);
         Type(typeFn)(target, propertyKey);
     };

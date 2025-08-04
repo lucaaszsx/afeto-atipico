@@ -26,34 +26,31 @@ export class RegisterUserRequest {
         identifyFields.username.maxLength,
         identifyFields.username.pattern
     )
-    username: string;
+    username!: string;
 
     @IsRequiredEmail()
-    email: string;
+    email!: string;
 
     @IsRequiredString(securityFields.password.minLength, securityFields.password.maxLength)
-    password: string;
+    password!: string;
 
     @IsRequiredString(
         identifyFields.displayName.minLength,
         identifyFields.displayName.maxLength,
         identifyFields.displayName.pattern
     )
-    displayName: string;
+    displayName!: string;
 }
 
 export class LoginUserRequest {
     @IsRequiredEmail()
-    email: string;
+    email!: string;
 
     @IsRequiredString(securityFields.password.minLength, securityFields.password.maxLength)
-    password: string;
+    password!: string;
 }
 
 export class VerifyEmailRequest {
-    @IsRequiredString()
-    userId: string;
-
     @IsRequiredString(vCodeSize, vCodeSize)
-    code: string;
+    code!: string;
 }

@@ -1,62 +1,118 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn, Heart } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/ui/logo';
+
+import { ApiErrorCodes, NetworkError, ApiError } from '@/lib/rest';
+import { validateLoginForm } from '@/utils/validation';
+import { useApp } from '../contexts/AppContext';
+import { useToast } from '@/hooks/use-toast';
+
+interface FormErrors {
+    email?: string;
+    password?: string;
+    general?: string;
+}
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [formErrors, setFormErrors] = useState<FormErrors>({});
     
-    const { login } = useAuth();
-    const navigate = useNavigate();
+    const { authService } = useApp();
     const { toast } = useToast();
-
+    const navigate = useNavigate();
+    
+    const validateForm = (): boolean => {
+        const errors: FormErrors = {};
+        const validationResult = validateLoginForm({ email, password });
+        
+        if (!validationResult.isValid) {
+            validationResult.errors.forEach(error => {
+                switch (error.field) {
+                    case 'email':
+                        errors.email = error.message;
+                        break;
+                    case 'password':
+                        errors.password = error.message;
+                        break;
+                }
+            });
+        }
+        
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+    
+    const handleLoginError = (error: NetworkError | ApiError): void => {
+        if (error.isRequestError) {
+            return toast({
+                title: 'Ocorreu um erro',
+                description: 'Não foi possível se conectar com o servidor devido a um erro durante a comunicação.',
+                variant: 'destructive'
+            });
+        }
+        
+        switch (error.apiCode) {
+            case ApiErrorCodes.AUTHENTICATION_FAILED:
+                toast({
+                    title: 'Erro de autenticação',
+                    description: 'E-mail ou senha inválidos',
+                    variant: 'destructive'
+                });
+                break;
+            
+            case ApiErrorCodes.VALIDATION_FAILED:
+                toast({
+                    title: 'Erro de validação',
+                    description: 'Ocorreu um erro ao tentar validar os dados fornecidos.',
+                    variant: 'destructive'
+                });
+                break;
+            
+            default:
+                toast({
+                    title: 'Erro interno no servidor',
+                    description: 'Ocorreu um erro interno no servidor ao tentar fazer a autenticação. Se o problema persistir, entre em contato com.o suporte.',
+                    variant: 'destructive'
+                });
+        }
+    };
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!validateForm()) return;
+        
         setIsLoading(true);
-
-        try {
-            const success = await login(email, password);
-            if (success) {
-                toast({
-                    title: "Login realizado com sucesso!",
-                    description: "Bem-vinda de volta à nossa comunidade.",
-                });
-                navigate('/');
-            } else {
-                toast({
-                    title: "Erro no login",
-                    description: "Email ou senha incorretos. Tente novamente.",
-                    variant: "destructive",
-                });
-            }
-        } catch (error) {
+        
+        const { data, error, success } = await authService.login({ email, password });
+        
+        if (success) {
             toast({
-                title: "Erro no login",
-                description: "Ocorreu um erro inesperado. Tente novamente.",
-                variant: "destructive",
+                title: 'Login realizado com sucesso!',
+                description: 'Bem-vinda de volta à nossa comunidade.'
             });
-        } finally {
-            setIsLoading(false);
+            navigate('/');
+        } else {
+            handleLoginError(error);
         }
+        
+        setIsLoading(false);
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center py-12 px-4">
             <div className="w-full max-w-md">
                 <div className="space-y-1 text-center mb-8">
-                    <Logo
-                        size="xl"
-                        showText={false}
-                    />
+                    <Logo size="xl" showText={false} />
                     <p className="text-gray-600">Bem-vinda de volta à nossa comunidade</p>
                 </div>
 
@@ -83,8 +139,12 @@ const Login = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="seu@email.com"
                                     required
-                                    className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all duration-300"
+                                    className={`h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all duration-300 ${formErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                    autoComplete="email"
                                 />
+                                {formErrors.email && (
+                                    <p className="text-sm text-red-600 mt-1">{formErrors.email}</p>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -99,7 +159,8 @@ const Login = () => {
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
                                         required
-                                        className="h-12 pr-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all duration-300"
+                                        className={`h-12 pr-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all duration-300 ${formErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                        autoComplete="current-password"
                                     />
                                     <button
                                         type="button"
@@ -109,6 +170,9 @@ const Login = () => {
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
+                                {formErrors.password && (
+                                    <p className="text-sm text-red-600 mt-1">{formErrors.password}</p>
+                                )}
                             </div>
 
                             <div className="text-right">
@@ -119,6 +183,12 @@ const Login = () => {
                                     Esqueceu sua senha?
                                 </Link>
                             </div>
+
+                            {formErrors.general && (
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <p className="text-sm text-red-600">{formErrors.general}</p>
+                                </div>
+                            )}
 
                             <Button
                                 type="submit"

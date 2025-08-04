@@ -35,34 +35,29 @@ export class AuthService {
 
         try {
             return await this.mailerService.dispatchVerificationCode({
-                to: user.email,
-                name: user.displayName,
+                to: user.email!,
+                displayName: user.displayName,
                 code: verification.code,
-                expiration
+                expiration: expiration.toString()
             });
         } catch (error) {
             this.logger.error(
-                `Failed to dispatch verification code to user ${user.id}: ${error.message}`
+                `Failed to dispatch verification code to user ${user.id}: ${(error as Error).message}`
             );
 
             throw error;
         }
     }
 
-    public async verifyEmail(userId: string, code: string): Promise<boolean> {
-        this.logger.info(`Starting email verification attempt for user => ${userId}`);
+    public async verifyEmail(user: IUser, code: string): Promise<void> {
+        const identifier = `${user.username} (${user.email})`;
+        
+        this.logger.info(`Starting email verification attempt for user => ${identifier}`);
 
-        const user = await this.userService.findById(userId, { verifications: 1, isVerified: 1 });
-
-        if (!user) {
-            this.logger.warn(`User with identifier '${userId}' not found`);
-
-            throw new UserNotFoundException();
-        }
         if (user.isVerified) {
-            this.logger.info(`User '${userId}' is already verified`);
-
-            return true;
+            this.logger.info(`User '${identifier}' is already verified`);
+            
+            return;
         }
 
         const verification = user.verifications?.find(
@@ -70,18 +65,18 @@ export class AuthService {
         );
 
         if (!verification || !verification.code) {
-            this.logger.warn(`Verification code provided for user '${userId}' is invalid`);
+            this.logger.warn(`Verification code provided for user '${identifier}' is invalid`);
 
             throw new InvalidCodeException();
         }
         if (new Date() > verification.expiresAt) {
-            this.logger.warn(`Verification code provided for user '${userId}' has expired`);
+            this.logger.warn(`Verification code provided for user '${identifier}' has expired`);
 
             throw new CodeExpiredException();
         }
         if (verification.used) {
             this.logger.warn(
-                `Verification code provided for user '${userId}' has already been used previously`
+                `Verification code provided for user '${identifier}' has already been used previously`
             );
 
             throw new CodeAlreadyUsedException();
@@ -89,7 +84,7 @@ export class AuthService {
 
         await this.userService.update(
             {
-                'id': userId,
+                'id': user.id,
                 'verifications.code': code
             },
             {
@@ -100,9 +95,7 @@ export class AuthService {
             }
         );
 
-        this.logger.info(`User '${userId}' has been successfully verified`);
-
-        return true;
+        this.logger.info(`User '${identifier}' has been successfully verified`);
     }
 
     public async resetPassword(token: string, newPassword: string): Promise<boolean> {
@@ -113,6 +106,7 @@ export class AuthService {
                 'passwordReset.token': token,
                 'passwordReset.expiresAt': { $gt: new Date() }
             },
+            undefined,
             { passwordReset: 1 }
         );
 
@@ -135,7 +129,7 @@ export class AuthService {
 
             return true;
         } catch (error) {
-            this.logger.error(`Error resetting password: ${error.message}`);
+            this.logger.error(`Error resetting password: ${(error as Error).message}`);
 
             throw error;
         }
@@ -151,6 +145,7 @@ export class AuthService {
 
         if (!user) {
             this.logger.warn(`User with email '${email}' not found!`);
+            
             throw new UserNotFoundException();
         }
 
@@ -204,19 +199,9 @@ export class AuthService {
 
             this.logger.info(`All sessions revoked for user ${userId}`);
         } catch (error) {
-            this.logger.error(`Error revoking sessions for user ${userId}: ${error.message}`);
+            this.logger.error(`Error revoking sessions for user ${userId}: ${(error as Error).message}`);
 
             throw error;
         }
-    }
-
-    public async isUserVerified(userId: string): Promise<boolean> {
-        const user = await this.userService.findById(userId, { isVerified: 1 });
-
-        if (!user) {
-            throw new UserNotFoundException();
-        }
-
-        return user.isVerified;
     }
 }

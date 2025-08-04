@@ -1,1 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Environment
 .env
+
+# Logs
+logs/
+*.log
+
+# Cache
+.eslintcache
+.prettiercache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

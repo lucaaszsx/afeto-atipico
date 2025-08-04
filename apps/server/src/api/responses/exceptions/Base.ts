@@ -10,6 +10,7 @@ import { ApiErrorCodes } from '../ApiCodes';
 
 export class BaseException extends Error {
     public readonly apiCode: ApiErrorCodes;
+    public readonly details: string[];
 
     constructor(apiCode: number, details: string[] = []) {
         super(`E${apiCode}`);

@@ -1,40 +1,35 @@
-import { IsOptional, IsString, IsDate } from 'class-validator';
-import { Transform, Exclude, Expose } from 'class-transformer';
-import { IGroupMessage } from '@/types/entities';
+import { IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Exclude, Expose, Type } from 'class-transformer';
+import { IUser, IGroup, IGroupMessage } from '@/types/entities';
+import { ApiGroupModel } from './ApiGroupModel';
+import { ApiUserModel } from './ApiUserModel';
 import { ApiBaseModel } from './ApiBaseModel';
 import { Service } from 'typedi';
 
 @Service()
 @Exclude()
-export class ApiGroupMessageModel extends ApiBaseModel implements IGroupMessage {
-    @IsString()
+export class ApiGroupMessageModel extends ApiBaseModel implements Omit<IGroupMessage, 'author' | 'group'> {
     @Expose()
-    groupId: string;
+    @ValidateNested()
+    @Type(() => ApiGroupModel)
+    group!: IGroup;
+
+    @Expose()
+    @ValidateNested()
+    @Type(() => ApiUserModel)
+    author!: IUser;
 
     @IsString()
     @Expose()
-    authorId: string;
-
-    @IsString()
-    @Expose()
-    content: string;
+    content!: string;
 
     @IsOptional()
     @IsString()
     @Expose()
     replyTo?: string;
 
-    @IsDate()
-    @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    @Expose()
-    createdAt: Date;
-
-    @IsDate()
-    @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    @Expose()
-    updatedAt: Date;
-
-    constructor(data: IGroupMessage = {} as IGroupMessage) {
+    constructor(data: Partial<IGroupMessage & { group: IGroup; author: IUser }> = {}) {
         super(data);
+        Object.assign(this, data);
     }
 }

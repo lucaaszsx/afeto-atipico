@@ -8,9 +8,15 @@
 
 import { ExpressMiddlewareInterface, Middleware } from 'routing-controllers';
 import { Request } from 'express';
-import { isPlainObject, isString, isArray } from 'lodash';
 import { Service } from 'typedi';
 import sanitizeHtml from 'sanitize-html';
+
+const isString = (value: any): value is string => typeof value === 'string';
+
+const isArray = (value: any): value is any[] => Array.isArray(value);
+
+const isPlainObject = (value: any): value is Record<string, any> => 
+    value !== null && typeof value === 'object' && value.constructor === Object;
 
 const sanitizeValue = (value: any): any => {
     if (isString(value)) {

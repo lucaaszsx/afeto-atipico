@@ -13,7 +13,7 @@ import { Logger } from '@/lib/logger';
 import mongoose from 'mongoose';
 
 export const DatabaseLoader: MicroframeworkLoader = async (
-    settings: MicroframeworkSettings
+    settings?: MicroframeworkSettings
 ): Promise<void> => {
     const { username, password, host, params, dbName } = EnvConfig.Database;
     const logger: Logger = new Logger(__filename);
@@ -26,10 +26,12 @@ export const DatabaseLoader: MicroframeworkLoader = async (
         process.exit(1);
     }
 
-    settings.onShutdown(() => {
-        mongoose.connection
-            .close()
-            .then(() => logger.info('MongoDB connection closed.'))
-            .catch((err) => logger.error('Error closing MongoDB connection:', err));
-    });
+    if (settings) {
+        settings.onShutdown(() => {
+            mongoose.connection
+                .close()
+                .then(() => logger.info('MongoDB connection closed.'))
+                .catch((err) => logger.error('Error closing MongoDB connection:', err));
+        });
+    }
 };

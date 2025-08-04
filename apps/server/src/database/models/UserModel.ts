@@ -8,10 +8,8 @@ import {
 import { VerificationContext, UserStatus } from '@/types/enums';
 import { CallbackError, Schema, model } from 'mongoose';
 import { UserConstraints } from '@/config/constants';
-import { ClassTransformOptions } from 'class-transformer';
 import { HashingException } from '@/api/responses';
 import { SnowflakeGenerator } from '@/lib/snowflake';
-import { ApiUserModel } from '@/api/models';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 
@@ -148,6 +146,17 @@ export const UserSchema: Schema<IUser> = new Schema<IUser>({
     children: {
         type: [ChildSchema],
         default: []
+    }
+});
+
+// Clean toObject transform to prevent circular references
+UserSchema.set('toObject', {
+    transform: function (doc: any, ret: any, options: any = {}) {
+        // Remove Mongoose internal properties
+        delete ret._id;
+        delete ret.__v;
+        
+        return ret;
     }
 });
 

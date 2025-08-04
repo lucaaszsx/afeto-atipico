@@ -12,6 +12,6 @@ import { BaseException } from '../Base';
 
 export class CannotLeaveAsGroupOwnerException extends BaseException {
     constructor(details?: string[]) {
-        super(ApiErrorCodes.CANNOT_LEAVE_AS_OWNER, details);
+        super(ApiErrorCodes.CANNOT_LEAVE_AS_GROUP_OWNER, details);
     }
 }

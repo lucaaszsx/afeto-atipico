@@ -17,11 +17,16 @@ import { ApiErrorCodes, sendApiResponse } from '../responses';
 import { Request, Response, NextFunction } from 'express';
 import { LoggerInterface } from '../../lib/logger';
 import { LoggerDecorator } from '../../decorators';
-import { BaseException } from '../responses';
+import { BaseException } from '../responses/exceptions/Base';
 import { ValidationError } from 'class-validator';
 import type { ApiResponse } from '@/types/common';
 import { EnvConfig } from '@/config/env';
 import { Service } from 'typedi';
+
+// Extend BadRequestError interface to include errors property
+interface ExtendedBadRequestError extends BadRequestError {
+    errors?: ValidationError[];
+}
 
 @Middleware({ type: 'after' })
 @Service()
@@ -66,15 +71,16 @@ export default class ErrorHandlerMiddleware implements ExpressErrorMiddlewareInt
 
         // Handle BadRequestError from routing-controllers (validation errors)
         if (error instanceof BadRequestError) {
+            const extendedError = error as ExtendedBadRequestError;
             // Check if it has validation errors in the 'errors' property
-            if (error.errors && Array.isArray(error.errors)) {
+            if (extendedError.errors && Array.isArray(extendedError.errors)) {
                 // Check if these are ValidationError objects from class-validator
                 if (
-                    error.errors.every(
+                    extendedError.errors.every(
                         (e: any) => e instanceof ValidationError || (e.property && e.constraints)
                     )
                 ) {
-                    const details = this.extractValidationErrors(error.errors);
+                    const details = this.extractValidationErrors(extendedError.errors);
 
                     return sendApiResponse(req, res, {
                         apiCode: ApiErrorCodes.VALIDATION_FAILED,
@@ -115,7 +121,7 @@ export default class ErrorHandlerMiddleware implements ExpressErrorMiddlewareInt
 
         // Handle unexpected errors
         return sendApiResponse(req, res, {
-            apiCode: ApiErrorCodes.INTERNAL_ERROR,
+            apiCode: ApiErrorCodes.INTERNAL_SERVER_ERROR,
             errorDetails:
                 EnvConfig.Environment.node === 'dev'
                     ? [error.message || 'Internal server error']

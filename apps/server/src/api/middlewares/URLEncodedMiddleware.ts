@@ -1,6 +1,6 @@
 /**
  * @file URLEncodedMiddleware.ts
- * @description Parses incoming request bodies with URL-encoded payloads (e.g., forms), making them available under `req.body`. Should be applied before any route handling or request validation logic. Uses Express’s built-in `urlencoded` parser internally. Typically applied to support HTML form submissions or similar data formats.
+ * @description Parses incoming request bodies with URL-encoded payloads (e.g., forms), making them available under `req.body`. Should be applied before any route handling or request validation logic. Uses Express's built-in `urlencoded` parser internally. Typically applied to support HTML form submissions or similar data formats.
  * @author Lucas
  * @license MIT
  *
@@ -12,7 +12,7 @@ import { Service } from 'typedi';
 
 @Middleware({ type: 'before' })
 @Service()
-export class UrlEncodedMiddleware {
+export default class URLEncodedMiddleware {
     private parser: (req: Request, res: Response, next: NextFunction) => void;
 
     constructor() {

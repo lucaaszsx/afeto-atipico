@@ -1,10 +1,9 @@
 import {
-    ResendEmailVerificationRequest,
     RegisterUserRequest,
     VerifyEmailRequest,
     LoginUserRequest
 } from './requests/AuthRequests';
-import { RegisterUserResponse, LoginUserResponse, RefreshResponse } from './requests/AuthResponses';
+import { RegisterUserResponse, LoginUserResponse, RefreshResponse } from './responses/AuthResponses';
 import { JsonController, Authorized, Body, Post, Req, Res } from 'routing-controllers';
 import { ApiSuccessCodes, createApiResponse } from '../responses';
 import {
@@ -16,11 +15,11 @@ import { UserService, AuthService } from '../services';
 import { VerificationContext } from '@/types/enums';
 import type { ApiResponse } from '@/types/common';
 import type { Request, Response } from 'express';
+import { RequiredUser } from '@/decorators';
 import { EnvConfig } from '@/config/env';
+import { IUser } from '@/types/entities';
 import { AuthUtils } from '@/lib/auth';
 import { Service } from 'typedi';
-import bcrypt from 'bcryptjs';
-import ms from 'ms';
 
 @Service()
 @JsonController('/auth')
@@ -30,26 +29,55 @@ export default class AuthController {
         private readonly userService: UserService
     ) {}
 
+    // Helper method to safely serialize user data for auth responses
+    private serializeUserForAuth(user: IUser): any {
+        return {
+            id: user.id,
+            username: user.username,
+            email: user.email || '',
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl || '',
+            bio: user.bio || '',
+            status: user.status,
+            isVerified: user.isVerified || false,
+            children: (user.children || []).map(child => ({
+                id: child.id,
+                name: child.name,
+                age: child.age,
+                notes: child.notes || ''
+            })),
+            createdAt: user.createdAt || new Date(),
+            updatedAt: user.updatedAt || new Date()
+        };
+    }
+
     @Post('/register')
     public async register(
         @Body() body: RegisterUserRequest,
-        @Req() req: Request
+        @Req() req: Request,
+        @Res() res: Response
     ): Promise<ApiResponse<RegisterUserResponse>> {
-        const verification = AuthUtils.createVerification(VerificationContext.EMAIL_CONFIRMATION);
         const user = await this.userService.create({
             username: body.username,
             email: body.email,
             password: body.password,
-            displayName: body.displayName,
-            verifications: [verification]
+            displayName: body.displayName
         });
-
-        await this.authService.dispatchVerificationCode(user, verification);
+        const { accessToken, session } = AuthUtils.createSession(user.id, req.ip, req.headers['user-agent']);
+        const updatedUser = await this.userService.update(
+            { id: user.id },
+            { $push: { sessions: session } }
+        );
+        
+        AuthUtils.setRefreshTokenCookie(res, session.refreshToken);
 
         return createApiResponse<RegisterUserResponse>({
             path: req.path,
             apiCode: ApiSuccessCodes.CREATED,
-            data: user.toObject({ groups: ['private'] })
+            data: {
+                user: this.serializeUserForAuth(updatedUser),
+                accessToken
+            }
         });
     }
 
@@ -59,27 +87,11 @@ export default class AuthController {
         @Req() req: Request,
         @Res() res: Response
     ): Promise<ApiResponse<LoginUserResponse>> {
-        const user = await this.userService.findByEmail(body.email, '+password');
+        const user = await this.userService.findByEmail(body.email, undefined, '+password');
+        
+        if (!user?.id || !(await AuthUtils.comparePassword(user.password, body.password))) throw new AuthenticationFailedException();
 
-        if (!user?.id) {
-            throw new AuthenticationFailedException();
-        }
-
-        const isPasswordValid = await this.authService.validatePassword(user.id, body.password);
-        if (!isPasswordValid) {
-            throw new AuthenticationFailedException();
-        }
-
-        const isVerified = await this.authService.isUserVerified(user.id);
-        if (!isVerified) {
-            throw new EmailNotVerifiedException();
-        }
-
-        const { accessToken, session } = AuthUtils.createSession(
-            user.id,
-            req.ip,
-            req.headers['user-agent']
-        );
+        const { accessToken, session } = AuthUtils.createSession(user.id, req.ip, req.headers['user-agent']);
         const updatedUser = await this.userService.update(
             { id: user.id },
             { $push: { sessions: session } }
@@ -91,14 +103,14 @@ export default class AuthController {
             path: req.path,
             apiCode: ApiSuccessCodes.OK,
             data: {
-                user: updatedUser.toObject({ groups: ['private'] }),
+                user: this.serializeUserForAuth(updatedUser),
                 accessToken
             }
         });
     }
 
-    @Post('/logout')
     @Authorized()
+    @Post('/logout')
     public async logout(@Req() req: Request, @Res() res: Response): Promise<ApiResponse<null>> {
         const cookieRefreshToken = AuthUtils.getRefreshTokenCookie(req);
         let payload;
@@ -133,7 +145,7 @@ export default class AuthController {
     ): Promise<ApiResponse<RefreshResponse>> {
         const cookieRefreshToken = AuthUtils.getRefreshTokenCookie(req);
         let payload;
-
+        console.log('REFRESH TOKEN GET: (/AUTH/REFRESH): ', { cookieRefreshToken });
         try {
             payload = AuthUtils.verifyRefreshToken(cookieRefreshToken);
         } catch (error) {
@@ -166,12 +178,14 @@ export default class AuthController {
         });
     }
 
+    @Authorized()
     @Post('/verify-email')
     public async verifyEmail(
         @Body() body: VerifyEmailRequest,
-        @Req() req: Request
+        @Req() req: Request,
+        @RequiredUser() user: IUser
     ): Promise<ApiResponse<null>> {
-        await this.authService.verifyEmail(body.userId, body.code);
+        await this.authService.verifyEmail(user, body.code);
 
         return createApiResponse<null>({
             path: req.path,
@@ -179,22 +193,16 @@ export default class AuthController {
         });
     }
 
+    @Authorized()
     @Post('/resend-email-verification')
     public async resendEmailVerification(
-        @Body() body: ResendEmailVerificationRequest,
-        @Req() req: Request
+        @Req() req: Request,
+        @RequiredUser() user: IUser
     ): Promise<ApiResponse<null>> {
-        const user = await this.userService.findById(body.userId);
-
-        if (!user?.id) throw new UserNotFoundException();
-
-        const isVerified = await this.authService.isUserVerified(user.id);
-        if (isVerified) {
-            return createApiResponse({
-                path: req.path,
-                apiCode: ApiSuccessCodes.OK
-            });
-        }
+        if (user.isVerified) return createApiResponse<null>({
+            path: req.path,
+            apiCode: ApiSuccessCodes.NO_CONTENT
+        });
 
         const verification = AuthUtils.createVerification(VerificationContext.EMAIL_CONFIRMATION);
 

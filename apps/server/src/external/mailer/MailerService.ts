@@ -56,6 +56,12 @@ interface PasswordChangedOptions {
     device: string;
 }
 
+interface EmailTemplate {
+    subject: string;
+    html: string;
+    [key: string]: string;
+}
+
 @Service()
 export class MailerService {
     private transporter: Transporter;
@@ -82,7 +88,7 @@ export class MailerService {
      * @readonly
      */
     private get currentYear() {
-        return new Date().getFullYear();
+        return new Date().getFullYear().toString();
     }
 
     /**
@@ -92,21 +98,21 @@ export class MailerService {
      * @param replacements - An object containing values to replace the template placeholders.
      * @returns The transformed template with placeholders replaced by actual values.
      */
-    private transformTemplate<T extends Record<string, unknown>>(
-        template: Record<keyof T, string>,
+    private transformTemplate<T extends Record<string, string>>(
+        template: EmailTemplate,
         replacements: T
-    ): Record<keyof T, string> {
+    ): EmailTemplate {
         return Object.entries(template).reduce((acc, [key, value]) => {
-            acc[key] = value.replace(/{{(.*?)}}/g, (_, key) => {
-                const replacementValue = replacements[key.trim()]?.toString();
+            acc[key as keyof EmailTemplate] = value.replace(/{{(.*?)}}/g, (_, placeholderKey) => {
+                const replacementValue = replacements[placeholderKey.trim()];
 
-                if (!replacementValue) this.logger.warn(`Replacement '${key}' not defined`);
+                if (!replacementValue) this.logger.warn(`Replacement '${placeholderKey}' not defined`);
 
                 return replacementValue ?? '<unknown replacement>';
             });
 
             return acc;
-        }, {});
+        }, {} as EmailTemplate);
     }
 
     /**
@@ -144,7 +150,7 @@ export class MailerService {
         to,
         ...options
     }: VerificationCodeOptions): Promise<SentMessageInfo> {
-        const { subject, html } = this.transformTemplate(VerificationCodeTemplate, {
+        const { subject, html } = this.transformTemplate(VerificationCodeTemplate as EmailTemplate, {
             ...options,
             year: this.currentYear
         });
@@ -162,7 +168,7 @@ export class MailerService {
         to,
         ...options
     }: PasswordResetOptions): Promise<SentMessageInfo> {
-        const { subject, html } = this.transformTemplate(PasswordResetTemplate, {
+        const { subject, html } = this.transformTemplate(PasswordResetTemplate as EmailTemplate, {
             ...options,
             year: this.currentYear
         });
@@ -180,7 +186,7 @@ export class MailerService {
         to,
         ...options
     }: PasswordChangedOptions): Promise<SentMessageInfo> {
-        const { subject, html } = this.transformTemplate(PasswordChangedTemplate, {
+        const { subject, html } = this.transformTemplate(PasswordChangedTemplate as EmailTemplate, {
             ...options,
             supportUrl: 'unknown',
             year: this.currentYear

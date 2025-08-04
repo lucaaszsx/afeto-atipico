@@ -11,16 +11,17 @@ import { ApiCodeHTTPMap } from './ApiCodeHTTPMap';
 import { ApiErrorMessages } from './ApiMessages';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 import type { Request, Response } from 'express';
+import type { ApiResponse } from '@/types/common';
 
 /**
  * Defines the input structure for creating a standardized API response.
  */
-interface CreateApiResponseOptions<T = Record<string, unknown>> {
+interface CreateApiResponseOptions<T = any> {
     /** Internal response code representing the result of the operation. */
     apiCode: ApiSuccessCodes | ApiErrorCodes;
 
     /** Optional payload to include in the response. */
-    data?: T;
+    data?: T | null;
 
     /** In case of error, details will be provided to the user */
     errorDetails?: string[];
@@ -42,37 +43,52 @@ interface CreateApiResponseOptions<T = Record<string, unknown>> {
  *
  * @returns A structured {@link ApiResponse} object.
  */
-export const createApiResponse = <T = Record<string, unknown>>({
+export const createApiResponse = <T = any>({
     data = null,
     errorDetails = [],
     apiCode,
     path = 'unknown'
-}: CreateApiResponseOptions): Response<ApiResponse<T>> | void => {
+}: CreateApiResponseOptions<T>): ApiResponse<T> => {
     if (
         !Object.values(ApiSuccessCodes).includes(apiCode as number) &&
         !Object.values(ApiErrorCodes).includes(apiCode as number)
     )
-        throw new InternalErrorException(
+        throw new InternalErrorException([
             `Invalid or missing "apiCode" in createApiResponse: ${apiCode}`
-        );
+        ]);
 
     const isSuccess = apiCode >= 1000 && apiCode < 2000;
     const statusCode = ApiCodeHTTPMap[apiCode];
+    const timestamp = new Date().toISOString();
 
-    return {
-        path,
-        success: isSuccess,
-        statusCode,
-        apiCode,
-        data: isSuccess ? data : null,
-        error: isSuccess
-            ? null
-            : {
-                  message:
-                      ApiErrorMessages[apiCode] || getReasonPhrase(statusCode) || 'Unknown message',
-                  details: errorDetails
-              }
-    };
+    if (isSuccess) {
+        return {
+            success: true,
+            statusCode,
+            apiCode: apiCode as ApiSuccessCodes,
+            data: data as T,
+            error: null,
+            path,
+            timestamp
+        } as ApiResponse<T>;
+    } else {
+        const message = isSuccess 
+            ? getReasonPhrase(statusCode) || 'Unknown message'
+            : ApiErrorMessages[apiCode as ApiErrorCodes] || getReasonPhrase(statusCode) || 'Unknown message';
+
+        return {
+            success: false,
+            statusCode,
+            apiCode: apiCode as ApiErrorCodes,
+            data: null,
+            error: {
+                message,
+                details: errorDetails
+            },
+            path,
+            timestamp
+        } as ApiResponse<T>;
+    }
 };
 
 /**
@@ -84,7 +100,7 @@ export const createApiResponse = <T = Record<string, unknown>>({
  *
  * @returns The finalized Express response.
  */
-export const sendApiResponse = <T = Record<string, unknown>>(
+export const sendApiResponse = <T = any>(
     req: Request,
     res: Response<ApiResponse<T>>,
     options: CreateApiResponseOptions<T>

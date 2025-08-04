@@ -27,17 +27,17 @@ import { Service } from 'typedi';
 @Exclude()
 export class ApiTokenWithExpiryModel implements ITokenWithExpiry {
     @IsString()
-    token: string;
+    token!: string;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    expiresAt: Date;
+    expiresAt!: Date;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    createdAt: Date;
+    createdAt!: Date;
 
-    constructor(data: ITokenWithExpiry = {} as ITokenWithExpiry) {
+    constructor(data: Partial<ITokenWithExpiry> = {}) {
         hydrateEntity(this, data);
     }
 }
@@ -46,10 +46,10 @@ export class ApiTokenWithExpiryModel implements ITokenWithExpiry {
 @Exclude()
 export class ApiVerificationCodeModel implements IUserVerification {
     @IsString()
-    code: string;
+    code!: string;
 
     @IsEnum(VerificationContext)
-    context: VerificationContext;
+    context!: VerificationContext;
 
     @IsOptional()
     @IsBoolean()
@@ -58,13 +58,13 @@ export class ApiVerificationCodeModel implements IUserVerification {
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    expiresAt: Date;
+    expiresAt!: Date;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    createdAt: Date;
+    createdAt!: Date;
 
-    constructor(data: IUserVerification = {} as IUserVerification) {
+    constructor(data: Partial<IUserVerification> = {}) {
         hydrateEntity(this, data);
     }
 }
@@ -73,18 +73,18 @@ export class ApiVerificationCodeModel implements IUserVerification {
 @Exclude()
 export class ApiRefreshTokenSessionModel implements IRefreshTokenSession {
     @IsUUID(4)
-    sessionId: string;
+    sessionId!: string;
 
     @IsString()
-    refreshToken: string;
+    refreshToken!: string;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    createdAt: Date;
+    createdAt!: Date;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    expiresAt: Date;
+    expiresAt!: Date;
 
     @IsOptional()
     @IsString()
@@ -94,38 +94,38 @@ export class ApiRefreshTokenSessionModel implements IRefreshTokenSession {
     @IsString()
     userAgent?: string;
 
-    @IsOptional()
     @IsBoolean()
     @Transform(({ value }) => Boolean(value))
-    isRevoked?: boolean;
+    isRevoked: boolean = false;
 
     @IsOptional()
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : undefined))
     revokedAt?: Date;
 
-    constructor(data: IRefreshTokenSession = {} as IRefreshTokenSession) {
+    constructor(data: Partial<IRefreshTokenSession> = {}) {
         hydrateEntity(this, data);
     }
 }
+
 @Service()
 @Expose()
 export class ApiChildModel implements IChild {
     @IsString()
-    id: string;
+    id!: string;
 
     @IsString()
-    name: string;
+    name!: string;
 
     @IsInt()
     @Transform(({ value }) => parseInt(value, 10))
-    age: number;
+    age!: number;
 
     @IsOptional()
     @IsString()
     notes?: string;
 
-    constructor(data: IChild = {} as IChild) {
+    constructor(data: Partial<IChild> = {}) {
         hydrateEntity(this, data);
     }
 }
@@ -135,19 +135,19 @@ export class ApiChildModel implements IChild {
 export class ApiUserModel extends ApiBaseModel implements IUser {
     @IsString()
     @Expose()
-    username: string;
+    username!: string;
 
     @IsEmail()
     @Expose({ groups: ['private'] })
-    email: string;
+    email!: string;
 
     @IsString()
     @Exclude({ toPlainOnly: true })
-    password: string;
+    password!: string;
 
     @IsString()
     @Expose()
-    displayName: string;
+    displayName!: string;
 
     @IsOptional()
     @IsString()
@@ -161,7 +161,7 @@ export class ApiUserModel extends ApiBaseModel implements IUser {
 
     @IsEnum(UserStatus)
     @Expose()
-    status: UserStatus;
+    status!: UserStatus;
 
     @IsOptional()
     @Type(() => ApiTokenWithExpiryModel)
@@ -185,24 +185,24 @@ export class ApiUserModel extends ApiBaseModel implements IUser {
     @IsBoolean()
     @Transform(({ value }) => Boolean(value))
     @Expose()
-    isVerified: boolean;
+    isVerified!: boolean;
 
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => ApiChildModel)
     @Expose()
-    children: ApiChildModel[];
+    children!: ApiChildModel[];
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
     @Expose()
-    createdAt: Date;
+    createdAt!: Date;
 
     @IsDate()
     @Transform(({ value }) => (value ? new Date(value) : new Date()))
-    updatedAt: Date;
+    updatedAt!: Date;
 
-    constructor(data: IUser = {} as IUser) {
+    constructor(data: Partial<IUser> = {}) {
         super(data);
     }
 }

@@ -12,10 +12,12 @@ import helmet from 'helmet';
 
 @Middleware({ type: 'before' })
 @Service()
-export class SecurityHSTSMiddleware implements ExpressMiddlewareInterface {
+export default class SecurityHSTSMiddleware implements ExpressMiddlewareInterface {
     private readonly secure = helmet({
-        maxAge: 60 * 60 * 24 * 365, // 1 year
-        includeSubDomains: true
+        hsts: {
+            maxAge: 60 * 60 * 24 * 365, // 1 year
+            includeSubDomains: true
+        }
     });
 
     use = this.secure;
