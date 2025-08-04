@@ -6,7 +6,7 @@
   "main": "dist/App.js",
   "type": "commonjs",
   "_moduleAliases": {
-    "@": "src"
+    "@": "dist"
   },
   "keywords": [
     "express.js",

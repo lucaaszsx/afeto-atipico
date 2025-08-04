@@ -7,7 +7,9 @@
 import { addAlias } from 'module-alias';
 
 // Configure module alias based on environment
-addAlias('@', process.env.NODE_ENV === 'prod' ? __dirname : __dirname.replace('dist', 'src'));
+if (process.env.NODE_ENV !== 'prod') {
+    addAlias('@', __dirname.replace('dist', 'src'));
+}
 
 import 'module-alias/register';
 import 'reflect-metadata';
